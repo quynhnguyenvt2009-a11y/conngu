@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Quiz Game</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f0f0f0;
+            font-family: Arial, sans-serif;
+        }
+        #gameContainer {
+            text-align: center;
+        }
+        canvas {
+            border: 2px solid #333;
+            background-color: white;
+            margin-bottom: 20px;
+        }
+        .controls {
+            margin-top: 10px;
+        }
+        #result {
+            font-size: 24px;
+            font-weight: bold;
+            margin: 10px 0;
+            height: 30px;
+        }
+        .correct { color: green; }
+        .wrong { color: red; }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+        <div id="result"></div>
+        <div class="controls">
+            <p>Nhấn phím 1, 2, 3 hoặc 4 để chọn đáp án</p>
+            <button id="restartBtn">Chơi lại</button>
+        </div>
+    </div>
+
+    <script>
+        // Canvas và context
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const resultDiv = document.getElementById('result');
+        const restartBtn = document.getElementById('restartBtn');
+
+        // Màu sắc
+        const WHITE = '#FFFFFF';
+        const BLACK = '#000000';
+        const GREEN = '#00AA00';
+        const RED = '#AA0000';
+        const BLUE = '#0000AA';
+        const GRAY = '#888888';
+
+        // Dữ liệu câu hỏi
+        const questions = [
+            {
+                question: "Thủ đô của Việt Nam là gì?",
+                answers: ["Hà Nội", "Hồ Chí Minh", "Đà Nẵng", "Huế"],
+                correct: 1
+            },
+            {
+                question: "Ai là người tìm ra châu Mỹ?",
+                answers: ["Magellan", "Columbus", "Vasco da Gama", "Marco Polo"],
+                correct: 2
+            },
+            {
+                question: "Loài động vật nào lớn nhất trên cạn?",
+                answers: ["Voi châu Phi", "Hươu cao cổ", "Hà mã", "Tê giác"],
+                correct: 1
+            },
+            {
+                question: "Ngôn ngữ lập trình nào được dùng cho web frontend?",
+                answers: ["Python", "Java", "JavaScript", "C++"],
+                correct: 3
+            }
+        ];
+
+        // Biến game
+        let currentQuestion = 0;
+        let score = 0;
+        let showResult = false;
+        let resultText = "";
+        let resultColor = "";
+        let characterState = "neutral"; // neutral, happy, sad
+        let gameEnded = false;
+
+        // Vẽ nhân vật
+        function drawCharacter() {
+            ctx.fillStyle = GRAY;
+            
+            switch(characterState) {
+                case "happy":
+                    ctx.fillStyle = GREEN;
+                    break;
+                case "sad":
+                    ctx.fillStyle = RED;
+                    break;
+            }
+            
+            // Vẽ đầu
+            ctx.beginPath();
+            ctx.arc(400, 200, 50, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Vẽ thân
+            ctx.fillRect(350, 250, 100, 100);
+            
+            // Vẽ mắt
+            ctx.fillStyle = BLACK;
+            ctx.beginPath();
+            ctx.arc(380, 190, 8, 0, Math.PI * 2);
+            ctx.arc(420, 190, 8, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Vẽ miệng
+            ctx.beginPath();
+            ctx.lineWidth = 3;
+            if (characterState === "happy") {
+                ctx.arc(400, 220, 20, 0, Math.PI);
+            } else if (characterState === "sad") {
+                ctx.arc(400, 230, 20, Math.PI, 2 * Math.PI);
+            } else {
+                ctx.moveTo(380, 220);
+                ctx.lineTo(420, 220);
+            }
+            ctx.stroke();
+            ctx.lineWidth = 1;
+        }
+
+        // Vẽ câu hỏi
+        function drawQuestion() {
+            const q = questions[currentQuestion];
+            
+            // Câu hỏi
+            ctx.fillStyle = BLACK;
+            ctx.font = "bold 24px Arial";
+            ctx.fillText(q.question, 50, 400);
+            
+            // Các đáp án
+            ctx.font = "20px Arial";
+            q.answers.forEach((answer, index) => {
+                ctx.fillText(`${index + 1}. ${answer}`, 70, 440 + index * 40);
+            });
+        }
+
+        // Vẽ thông tin
+        function drawInfo() {
+            ctx.fillStyle = BLACK;
+            ctx.font = "18px Arial";
+            ctx.fillText(`Câu ${currentQuestion + 1}/${questions.length} - Điểm: ${score}`, 20, 30);
+        }
+
+        // Vẽ hướng dẫn
+        function drawInstructions() {
+            if (!showResult && !gameEnded) {
+                ctx.fillStyle = BLUE;
+                ctx.font = "18px Arial";
+                ctx.fillText("Nhấn phím 1, 2, 3 hoặc 4 để chọn đáp án", 50, 570);
+            }
+        }
+
+        // Vẽ màn hình kết thúc
+        function drawGameOver() {
+            ctx.fillStyle = WHITE;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            ctx.fillStyle = BLACK;
+            ctx.font = "bold 32px Arial";
+            ctx.fillText("Trò chơi kết thúc!", 250, 250);
+            
+            ctx.font = "24px Arial";
+            ctx.fillText(`Điểm của bạn: ${score}/${questions.length}`, 280, 300);
+            
+            const percentage = Math.round((score / questions.length) * 100);
+            ctx.fillText(`Tỷ lệ đúng: ${percentage}%`, 300, 340);
+            
+            ctx.font = "20px Arial";
+            ctx.fillText("Nhấn nút 'Chơi lại' để bắt đầu lại", 230, 400);
+        }
+
+        // Vẽ toàn bộ game
+        function drawGame() {
+            // Clear canvas
+            ctx.fillStyle = WHITE;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            if (gameEnded) {
+                drawGameOver();
+            } else {
+                drawCharacter();
+                drawQuestion();
+                drawInfo();
+                drawInstructions();
+            }
+        }
+
+        // Xử lý kết quả
+        function showAnswerResult(isCorrect) {
+            const q = questions[currentQuestion];
+            
+            if (isCorrect) {
+                resultText = "✓ Đúng rồi!";
+                resultColor = "correct";
+                characterState = "happy";
+                score++;
+            } else {
+                resultText = `✗ Sai! Đáp án đúng: ${q.correct}. ${q.answers[q.correct - 1]}`;
+                resultColor = "wrong";
+                characterState = "sad";
+            }
+            
+            showResult = true;
+            resultDiv.textContent = resultText;
+            resultDiv.className = resultColor;
+            
+            // Chuyển câu hỏi sau 2 giây
+            setTimeout(() => {
+                currentQuestion++;
+                showResult = false;
+                characterState = "neutral";
+                resultDiv.textContent = "";
+                
+                if (currentQuestion >= questions.length) {
+                    gameEnded = true;
+                    drawGame();
+                } else {
+                    drawGame();
+                }
+            }, 2000);
+        }
+
+        // Reset game - HÀM QUAN TRỌNG ĐÃ ĐƯỢC SỬA
+        function resetGame() {
+            currentQuestion = 0;
+            score = 0;
+            showResult = false;
+            characterState = "neutral";
+            gameEnded = false;
+            resultDiv.textContent = "";
+            resultDiv.className = "";
+            drawGame();
+        }
+
+        // Xử lý sự kiện bàn phím
+        document.addEventListener('keydown', (event) => {
+            if (showResult || gameEnded) return;
+            
+            const key = parseInt(event.key);
+            if (key >= 1 && key <= 4) {
+                const isCorrect = key === questions[currentQuestion].correct;
+                showAnswerResult(isCorrect);
+                drawGame();
+            }
+        });
+
+        // Xử lý nút chơi lại - QUAN TRỌNG: Thêm event listener
+        restartBtn.addEventListener('click', resetGame);
+
+        // Khởi động game
+        drawGame();
+    </script>
+</body>
+</html>
