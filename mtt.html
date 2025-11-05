@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Quiz — Mèo cute</title>
+<style>
+  :root{--bg:#fff7fc;--card:#ffffff;--accent:#ff77b6;--muted:#6b5a6b}
+  body{margin:0;font-family:Arial,Helvetica,sans-serif;background:linear-gradient(180deg,var(--bg),#fff);display:flex;align-items:center;justify-content:center;height:100vh}
+  .wrap{width:920px;max-width:96vw;padding:18px;border-radius:12px;background:linear-gradient(180deg,rgba(255,255,255,0.9),rgba(255,255,255,0.98));box-shadow:0 8px 30px rgba(0,0,0,0.06);text-align:center}
+  h1{margin:0 0 8px;font-size:20px;color:#3a1a2a}
+  .top{display:flex;align-items:center;gap:12px;justify-content:space-between}
+  .canvas{background:#fff;border-radius:10px;padding:14px;margin-top:12px}
+  canvas{display:block;margin:0 auto;border-radius:8px;background:transparent}
+  .question{font-size:18px;color:#2b1a2a;margin:12px 0}
+  .answers{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+  .ans-btn{flex:1 1 45%;min-width:200px;padding:12px;border-radius:10px;border:2px solid rgba(43,26,42,0.06);background:linear-gradient(180deg,#fff,#fff6fb);cursor:pointer;font-weight:700}
+  .ans-btn:hover{transform:translateY(-4px)}
+  .status{height:28px;margin-top:8px;font-weight:800}
+  .hearts{font-size:22px;color:#ff3b7e}
+  .hearts .lost{color:#ddd}
+  .controls{margin-top:12px}
+  .btn{padding:10px 16px;border-radius:8px;border:none;background:var(--accent);color:#fff;cursor:pointer}
+  .result-screen{display:none;padding:16px;margin-top:12px;background:#fff0fb;border-radius:10px}
+  @media(max-width:720px){.ans-btn{flex-basis:100%}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div>
+      <h1>Quiz: Xây dựng CNXH</h1>
+      <div class="muted">Trả lời 5 câu — Có 3 trái tim, sai mất tim</div>
+    </div>
+    <div>
+      <div class="hearts" id="heartsDisplay">❤️ ❤️ ❤️</div>
+    </div>
+  </div>
+
+  <div class="canvas">
+    <canvas id="charCanvas" width="220" height="220"></canvas>
+    <div class="question" id="questionText">Câu hỏi sẽ hiện ở đây</div>
+    <div class="answers" id="answersList"></div>
+    <div class="status" id="statusText"></div>
+    <div class="controls">
+      <button id="restartBtn" class="btn">Chơi lại</button>
+    </div>
+
+    <div class="result-screen" id="resultScreen">
+      <h3>Kết quả</h3>
+      <p id="finalScore" style="font-weight:900;font-size:20px"></p>
+      <button id="playAgain" class="btn">Chơi lại</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// === Questions (5) from your list ===
+const QUESTIONS = [
+  {q: "Hiện nay, những quốc gia nào vẫn kiên định con đường xây dựng chủ nghĩa xã hội?", a:["Trung Quốc, Việt Nam, Cuba, Lào","Trung Quốc, Nga, Việt Nam, Cam-pu-chia","Việt Nam, Cuba, Hàn Quốc, Lào","Cuba, Trung Quốc, Cam-pu-chia, Nhật Bản"], correct:0},
+  {q: "Ai là người khởi xướng công cuộc cải cách và mở cửa Trung Quốc từ năm 1978?", a:["Mao Trạch Đông","Đặng Tiểu Bình","Giang Trạch Dân","Tập Cận Bình"], correct:1},
+  {q: "Những thành tựu của công cuộc đổi mới, cải cách ở các nước châu Á, khu vực Mỹ La-tinh là cơ sở vững chắc để chứng minh", a:["chủ nghĩa xã hội có sức sống, có triển vọng thực sự trên thế giới.","chủ nghĩa tư bản không còn là một hệ thống duy nhất trên thế giới.","chủ nghĩa xã hội ngày càng phát triển và mở rộng về không gian địa lí.","chủ nghĩa xã hội đã trở thành một hệ thống trên phạm vi thế giới."], correct:0},
+  {q: "Từ công cuộc cải cách mở của Trung Quốc,Việt Nam có thể rút ra bài học kinh nghiệm gì trong công cuộc xây dựng và đổi mới đất nước hiện nay?", a:["Lấy phát triển kinh tế làm trung tâm, tiến hành cải cách và mở cửa, chuyển nền kinh tế tập trung sang nền kinh tế thị trường TBCN.","Lấy phát triển kinh tế làm trung tâm, tiến hành cải cách và mở cửa, chuyển nền kinh tế tập trung sang nền kinh tế thị trường tự do.","Lấy phát triển chính trị làm trung tâm, tiến hành cải cách và mở cửa, chuyển nền kinh tế tập trung sang nền kinh tế thị trường XHCN.","Lấy phát triển kinh tế làm trung tâm, tiến hành cải cách và mở cửa, chuyển nền kinh tế tập trung sang nền kinh tế thị trường XHCN."], correct:3},
+  {q: "Mục tiêu lâu dài của Việt Nam trong quá trình xây dựng CNXH là:", a:["Dân giàu, nước mạnh, dân chủ, công bằng, văn minh","Kinh tế tư bản phát triển","Công nghiệp hóa bằng mọi giá","Giảm vai trò của nhà nước"], correct:0}
+];
+
+// === Character images (3 cats) (.jfif filenames as user used earlier) ===
+const IMG_NEUTRAL_SRC = 'cat_neutral.png.jfif';
+const IMG_HAPPY_SRC = 'cat_happy.png.jfif';
+const IMG_SAD_SRC = 'cat_sad.png.jfif';
+
+// Load images with safe fallback
+function loadImage(src){
+  const img = new Image();
+  img.src = src;
+  img._loaded = false;
+  img._fail = false;
+  img.onload = () => img._loaded = true;
+  img.onerror = () => { img._fail = true; img._loaded = true; };
+  return img;
+}
+const imgNeutral = loadImage(IMG_NEUTRAL_SRC);
+const imgHappy = loadImage(IMG_HAPPY_SRC);
+const imgSad = loadImage(IMG_SAD_SRC);
+
+// Elements
+const canvas = document.getElementById('charCanvas');
+const ctx = canvas.getContext('2d');
+const questionText = document.getElementById('questionText');
+const answersList = document.getElementById('answersList');
+const statusText = document.getElementById('statusText');
+const heartsDisplay = document.getElementById('heartsDisplay');
+const restartBtn = document.getElementById('restartBtn');
+const resultScreen = document.getElementById('resultScreen');
+const finalScore = document.getElementById('finalScore');
+const playAgain = document.getElementById('playAgain');
+
+// State
+let idx = 0;
+let score = 0;
+let lives = 3; // 3 hearts
+let charState = 'neutral'; // neutral | happy | sad
+let answering = false;
+
+// Draw character
+let tick = 0;
+function drawCharacter(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  tick++;
+  const bounce = Math.sin(tick/12) * 6;
+  const w = 160, h = 160;
+  const x = (canvas.width - w)/2;
+  const y = 20 + bounce;
+  const img = (charState === 'happy') ? imgHappy : (charState === 'sad' ? imgSad : imgNeutral);
+
+  ctx.save();
+  // subtle tilt for emotion
+  const tilt = charState === 'sad' ? -0.06 : (charState === 'happy' ? 0.06 : 0);
+  ctx.translate(x + w/2, y + h/2);
+  ctx.rotate(tilt);
+  if(img._loaded && !img._fail){
+    ctx.drawImage(img, -w/2, -h/2, w, h);
+  } else {
+    // fallback cute cat box + emoji
+    ctx.fillStyle = '#ffeef7';
+    ctx.fillRect(-w/2, -h/2, w, h);
+    ctx.fillStyle = '#6b2b4b';
+    ctx.font = '56px serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    const emoji = charState === 'happy' ? 'https://github.com/quynhnguyenvt2009-a11y/conngu/blob/main/character_happy.png' : (charState === 'sad' ? 'https://github.com/quynhnguyenvt2009-a11y/conngu/blob/main/character_sad.png' : 'https://github.com/quynhnguyenvt2009-a11y/conngu/blob/main/character_neutral.png');
+    ctx.fillText(emoji, 0, 0);
+  }
+  ctx.restore();
+}
+
+function renderLoop(){
+  drawCharacter();
+  if(!resultScreen.style.display || resultScreen.style.display === 'none') requestAnimationFrame(renderLoop);
+}
+requestAnimationFrame(renderLoop);
+
+// Update hearts display
+function updateHearts(){
+  const hearts = [];
+  for(let i=0;i<3;i++){
+    if(i < lives) hearts.push('❤️'); else hearts.push('<span class="lost">♡</span>');
+  }
+  heartsDisplay.innerHTML = hearts.join(' ');
+}
+
+// Load question
+function loadQuestion(){
+  answering = false;
+  statusText.textContent = '';
+  const q = QUESTIONS[idx];
+  questionText.textContent = `${idx+1}. ${q.q}`;
+  answersList.innerHTML = '';
+  q.a.forEach((opt,i)=>{
+    const btn = document.createElement('button');
+    btn.className = 'ans-btn';
+    btn.textContent = `${i+1}. ${opt}`;
+    btn.addEventListener('click', ()=>selectAnswer(i));
+    answersList.appendChild(btn);
+  });
+  updateHearts();
+  charState = 'neutral';
+}
+
+// Select answer
+function selectAnswer(choice){
+  if(answering) return; answering = true;
+  const q = QUESTIONS[idx];
+  if(choice === q.correct){
+    // correct
+    score++;
+    charState = 'happy';
+    statusText.textContent = '✅ Đúng rồi!';
+    statusText.style.color = '#197a2e';
+  } else {
+    // wrong: lose a heart
+    lives = Math.max(0, lives - 1);
+    charState = 'sad';
+    statusText.textContent = '✖ Sai rồi!';
+    statusText.style.color = '#b22222';
+  }
+  updateHearts();
+
+  // after short delay move next or end
+  setTimeout(()=>{
+    idx++;
+    if(lives <= 0){
+      showResult();
+      return;
+    }
+    if(idx >= QUESTIONS.length){
+      showResult();
+    } else {
+      loadQuestion();
+    }
+  }, 900);
+}
+
+// Keyboard support
+document.addEventListener('keydown', (e)=>{
+  if(answering) return;
+  const k = parseInt(e.key);
+  if(!isNaN(k) && k >=1 && k <=4){
+    const btns = answersList.querySelectorAll('button');
+    if(btns && btns[k-1]) btns[k-1].click();
+  }
+});
+
+// Show result
+function showResult(){
+  // hide quiz elements
+  document.getElementById('answersList').style.display = 'none';
+  document.getElementById('questionText').style.display = 'none';
+  document.getElementById('statusText').style.display = 'none';
+  resultScreen.style.display = 'block';
+  finalScore.textContent = `Bạn được ${score}/${QUESTIONS.length} điểm`;
+}
+
+// Restart
+function restart(){
+  idx = 0; score = 0; lives = 3; charState = 'neutral'; answering = false;
+  resultScreen.style.display = 'none';
+  document.getElementById('answersList').style.display = '';
+  document.getElementById('questionText').style.display = '';
+  document.getElementById('statusText').style.display = '';
+  loadQuestion();
+}
+restartBtn.addEventListener('click', restart);
+playAgain.addEventListener('click', restart);
+
+// init
+updateHearts();
+loadQuestion();
+</script>
+</body>
+</html>
+
