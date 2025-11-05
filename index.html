@@ -65,13 +65,17 @@
         const resultDiv = document.getElementById('result');
         const restartBtn = document.getElementById('restartBtn');
 
-        // Màu sắc
-        const WHITE = '#FFFFFF';
-        const BLACK = '#000000';
-        const GREEN = '#00AA00';
-        const RED = '#AA0000';
-        const BLUE = '#0000AA';
-        const GRAY = '#888888';
+        // Tải hình ảnh
+        const bgImage = new Image();
+        const characterImages = {
+            neutral: new Image(),
+            happy: new Image(),
+            sad: new Image()
+        };
+        bgImage.src = "background.jpg";
+        characterImages.neutral.src = "character_neutral.png";
+        characterImages.happy.src = "character_happy.png";
+        characterImages.sad.src = "character_sad.png";
 
         // Dữ liệu câu hỏi
         const questions = [
@@ -103,62 +107,32 @@
         let showResult = false;
         let resultText = "";
         let resultColor = "";
-        let characterState = "neutral"; // neutral, happy, sad
+        let characterState = "neutral";
         let gameEnded = false;
 
-        // Vẽ nhân vật
+        // Vẽ nhân vật (bằng ảnh)
         function drawCharacter() {
-            ctx.fillStyle = GRAY;
-            
-            switch(characterState) {
-                case "happy":
-                    ctx.fillStyle = GREEN;
-                    break;
-                case "sad":
-                    ctx.fillStyle = RED;
-                    break;
-            }
-            
-            // Vẽ đầu
-            ctx.beginPath();
-            ctx.arc(400, 200, 50, 0, Math.PI * 2);
-            ctx.fill();
-            
-            // Vẽ thân
-            ctx.fillRect(350, 250, 100, 100);
-            
-            // Vẽ mắt
-            ctx.fillStyle = BLACK;
-            ctx.beginPath();
-            ctx.arc(380, 190, 8, 0, Math.PI * 2);
-            ctx.arc(420, 190, 8, 0, Math.PI * 2);
-            ctx.fill();
-            
-            // Vẽ miệng
-            ctx.beginPath();
-            ctx.lineWidth = 3;
-            if (characterState === "happy") {
-                ctx.arc(400, 220, 20, 0, Math.PI);
-            } else if (characterState === "sad") {
-                ctx.arc(400, 230, 20, Math.PI, 2 * Math.PI);
+            const img = characterImages[characterState];
+            const x = 330;
+            const y = 120;
+            const w = 150;
+            const h = 150;
+
+            if (img.complete) {
+                ctx.drawImage(img, x, y, w, h);
             } else {
-                ctx.moveTo(380, 220);
-                ctx.lineTo(420, 220);
+                // fallback khi hình chưa load xong
+                ctx.fillStyle = "#999";
+                ctx.fillRect(x, y, w, h);
             }
-            ctx.stroke();
-            ctx.lineWidth = 1;
         }
 
         // Vẽ câu hỏi
         function drawQuestion() {
             const q = questions[currentQuestion];
-            
-            // Câu hỏi
-            ctx.fillStyle = BLACK;
+            ctx.fillStyle = "#000";
             ctx.font = "bold 24px Arial";
             ctx.fillText(q.question, 50, 400);
-            
-            // Các đáp án
             ctx.font = "20px Arial";
             q.answers.forEach((answer, index) => {
                 ctx.fillText(`${index + 1}. ${answer}`, 70, 440 + index * 40);
@@ -167,7 +141,7 @@
 
         // Vẽ thông tin
         function drawInfo() {
-            ctx.fillStyle = BLACK;
+            ctx.fillStyle = "#000";
             ctx.font = "18px Arial";
             ctx.fillText(`Câu ${currentQuestion + 1}/${questions.length} - Điểm: ${score}`, 20, 30);
         }
@@ -175,7 +149,7 @@
         // Vẽ hướng dẫn
         function drawInstructions() {
             if (!showResult && !gameEnded) {
-                ctx.fillStyle = BLUE;
+                ctx.fillStyle = "#0000AA";
                 ctx.font = "18px Arial";
                 ctx.fillText("Nhấn phím 1, 2, 3 hoặc 4 để chọn đáp án", 50, 570);
             }
@@ -183,29 +157,29 @@
 
         // Vẽ màn hình kết thúc
         function drawGameOver() {
-            ctx.fillStyle = WHITE;
+            ctx.fillStyle = "#fff";
             ctx.fillRect(0, 0, canvas.width, canvas.height);
-            
-            ctx.fillStyle = BLACK;
+            ctx.fillStyle = "#000";
             ctx.font = "bold 32px Arial";
             ctx.fillText("Trò chơi kết thúc!", 250, 250);
-            
             ctx.font = "24px Arial";
             ctx.fillText(`Điểm của bạn: ${score}/${questions.length}`, 280, 300);
-            
             const percentage = Math.round((score / questions.length) * 100);
             ctx.fillText(`Tỷ lệ đúng: ${percentage}%`, 300, 340);
-            
             ctx.font = "20px Arial";
             ctx.fillText("Nhấn nút 'Chơi lại' để bắt đầu lại", 230, 400);
         }
 
         // Vẽ toàn bộ game
         function drawGame() {
-            // Clear canvas
-            ctx.fillStyle = WHITE;
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            
+            // Nền
+            if (bgImage.complete) {
+                ctx.drawImage(bgImage, 0, 0, canvas.width, canvas.height);
+            } else {
+                ctx.fillStyle = "#f0f0f0";
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
+
             if (gameEnded) {
                 drawGameOver();
             } else {
@@ -219,7 +193,6 @@
         // Xử lý kết quả
         function showAnswerResult(isCorrect) {
             const q = questions[currentQuestion];
-            
             if (isCorrect) {
                 resultText = "✓ Đúng rồi!";
                 resultColor = "correct";
@@ -230,28 +203,24 @@
                 resultColor = "wrong";
                 characterState = "sad";
             }
-            
             showResult = true;
             resultDiv.textContent = resultText;
             resultDiv.className = resultColor;
-            
-            // Chuyển câu hỏi sau 2 giây
+
             setTimeout(() => {
                 currentQuestion++;
                 showResult = false;
                 characterState = "neutral";
                 resultDiv.textContent = "";
-                
+
                 if (currentQuestion >= questions.length) {
                     gameEnded = true;
-                    drawGame();
-                } else {
-                    drawGame();
                 }
+                drawGame();
             }, 2000);
         }
 
-        // Reset game - HÀM QUAN TRỌNG ĐÃ ĐƯỢC SỬA
+        // Reset game
         function resetGame() {
             currentQuestion = 0;
             score = 0;
@@ -263,23 +232,21 @@
             drawGame();
         }
 
-        // Xử lý sự kiện bàn phím
+        // Sự kiện bàn phím
         document.addEventListener('keydown', (event) => {
             if (showResult || gameEnded) return;
-            
             const key = parseInt(event.key);
             if (key >= 1 && key <= 4) {
                 const isCorrect = key === questions[currentQuestion].correct;
                 showAnswerResult(isCorrect);
-                drawGame();
             }
         });
 
-        // Xử lý nút chơi lại - QUAN TRỌNG: Thêm event listener
+        // Nút chơi lại
         restartBtn.addEventListener('click', resetGame);
 
-        // Khởi động game
-        drawGame();
+        // Khi tất cả hình đã tải xong thì vẽ
+        window.onload = drawGame;
     </script>
 </body>
 </html>
