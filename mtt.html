@@ -128,7 +128,7 @@ function drawCharacter(){
     ctx.font = '56px serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    const emoji = charState === 'happy' ? 'https://github.com/quynhnguyenvt2009-a11y/conngu/blob/main/character_happy.png' : (charState === 'sad' ? 'https://github.com/quynhnguyenvt2009-a11y/conngu/blob/main/character_sad.png' : 'https://github.com/quynhnguyenvt2009-a11y/conngu/blob/main/character_neutral.png');
+    const emoji = charState === 'happy' ? 'https://raw.githubusercontent.com/quynhnguyenvt2009-a11y/conngu/main/character_happy.png' : (charState === 'sad' ? 'https://raw.githubusercontent.com/quynhnguyenvt2009-a11y/conngu/main/character_sad.png' : 'https://raw.githubusercontent.com/quynhnguyenvt2009-a11y/conngu/main/character_neutral.png');
     ctx.fillText(emoji, 0, 0);
   }
   ctx.restore();
