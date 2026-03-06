@@ -1,0 +1,97 @@
+HTML
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>3D Offline Map Simulation</title>
+    <style>
+        body { margin: 0; overflow: hidden; }
+        #info-box {
+            position: absolute; top: 20px; left: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 15px; display: none; border-radius: 8px;
+            font-family: sans-serif; box-shadow: 0 0 10px rgba(0,0,0,0.3);
+        }
+    </style>
+</head>
+<body>
+
+<div id="info-box">
+    <h3 id="title">Thông tin vật thể</h3>
+    <p id="desc">Mô tả chi tiết sẽ hiện ở đây.</p>
+    <button onclick="document.getElementById('info-box').style.display='none'">Đóng</button>
+</div>
+
+<script src="three.min.js"></script>
+
+<script>
+    let scene, camera, renderer, cube;
+
+    function init() {
+        // 1. Khởi tạo Scene và Camera
+        scene = new THREE.Scene();
+        camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        // 2. Tạo bầu trời 3D (Skybox) từ 5-6 ảnh góc nhìn
+        const loader = new THREE.CubeTextureLoader();
+        const texture = loader.load([
+            'textures/right.jpg',  // Phải
+            'textures/left.jpg',   // Trái
+            'textures/top.jpg',    // Trên
+            'textures/bottom.jpg', // Dưới (có thể dùng ảnh nền đất)
+            'textures/front.jpg',  // Trước
+            'textures/back.jpg',   // Sau
+        ]);
+        scene.background = texture;
+
+        // 3. Tạo một Object (Ví dụ là một khối hộp màu đỏ)
+        const geometry = new THREE.BoxGeometry(1, 1, 1);
+        const material = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+        cube = new THREE.Mesh(geometry, material);
+        cube.position.set(0, 0, -5); // Đặt ở phía trước 5 đơn vị
+        cube.userData = { title: "Trạm Thông Tin A", desc: "Đây là dữ liệu bạn đã cài đặt sẵn cho vật thể này." };
+        scene.add(cube);
+
+        camera.position.z = 0;
+    }
+
+    // 4. Xử lý sự kiện Click vào Object
+    window.addEventListener('click', onDocumentMouseDown, false);
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+
+    function onDocumentMouseDown(event) {
+        mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+        mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+        raycaster.setFromCamera(mouse, camera);
+        const intersects = raycaster.intersectObjects(scene.children);
+
+        if (intersects.length > 0) {
+            const obj = intersects[0].object;
+            document.getElementById('title').innerText = obj.userData.title;
+            document.getElementById('desc').innerText = obj.userData.desc;
+            document.getElementById('info-box').style.display = 'block';
+        }
+    }
+
+    // 5. Di chuyển bằng phím (W, A, S, D)
+    window.addEventListener('keydown', (e) => {
+        if (e.key === 'w') camera.position.z -= 0.5; // Tiến lên
+        if (e.key === 's') camera.position.z += 0.5; // Lùi lại
+    });
+
+    function animate() {
+        requestAnimationFrame(animate);
+        renderer.render(scene, camera);
+    }
+
+    init();
+    animate();
+</script>
+</body>
+</html>
